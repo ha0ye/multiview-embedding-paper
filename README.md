@@ -1,6 +1,10 @@
 # multiview-embedding-paper
-Code and simulation data for Ye &amp; Sugihara 2016
+Code and simulation data for:
+
+Ye & Sugihara 2016
+
 "Information leverage in interconnected ecosystems: Overcoming the curse of dimensionality"
+
 Science 353, Issue 6302, pp. 922-925
 
 ## Notes

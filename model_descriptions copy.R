@@ -27,7 +27,7 @@ make_model_1 <- function()
 }
 
 ## model 2: Hastings-Powell 3sp model (process error not done properly, so set to 0)
-make_model_2 <- function(out_file = "model_2.Rdata", downsample = 800)
+make_model_2 <- function()
 {
     run_model_2 <- function(a1, b1, a2, b2, d1, d2, run_time = 1000)
     {
@@ -56,7 +56,7 @@ make_model_2 <- function(out_file = "model_2.Rdata", downsample = 800)
         data <- matrix(0, nrow = run_time, ncol = n)
         data[1,] <- c(0.8, 0.2, 8)
         
-        sample_freq <- downsample
+        sample_freq <- 800
         dt <- 0.01
         
         for(i in 2:run_time)
@@ -79,8 +79,8 @@ make_model_2 <- function(out_file = "model_2.Rdata", downsample = 800)
     d2 <- 0.015
     
     # generate data
-    data <- run_model_2(a1, b1, a2, b2, d1, d2, run_time = 3000 * 800 / downsample)
-    save(data, file = out_file)
+    data <- run_model_2(a1, b1, a2, b2, d1, d2, run_time = 3000)
+    save(data, file = "model_2.Rdata")
     return()
 }
 
@@ -121,93 +121,6 @@ make_model_3 <- function()
     data <- run_model_3(params, run_time = 3000)
     save(data, file = "model_3.Rdata")
     return()
-}
-
-## model 4: 12-species Huisman-Weissing resource competition model
-make_model_4 <- function()
-{
-    run_model_4 <- function(run_time = 1000)
-    {
-        # step function
-        step <- function(x, dt)
-        {
-            f <- function(x)
-            {
-                N <- head(x, num_species)
-                R <- tail(x, num_resources)
-                
-                mu <- r * apply(R / (K + R), 2, min)
-                N_prime <- N * (mu - m) # vector calculation (each of N, mu, m is 1:num_species)
-                R_prime <- D * (S - R) - C %*% (mu * N)
-                return(c(N_prime, R_prime))
-            }
-            
-            k1 <- f(x)
-            k2 <- f(x + dt/2 * k1)
-            k3 <- f(x + dt/2 * k2)
-            k4 <- f(x + dt * k3)
-            return(x + dt / 6 * (k1 + 2*k2 + 2*k3 + k4))
-        }
-        
-        # initial values & coefficients (Huisman & Weissing 2001, Am. Nat. Fig. 1)
-        S <- c(6, 10, 14, 4, 9)
-        N0 <- c(0.11, 0.12, 0.13, 0.14, 0.15, 0, 0, 0, 0, 0, 0, 0)
-        num_resources <- length(S)
-        num_species <- length(N0)
-        R <- matrix(S, byrow = TRUE, nrow = run_time, ncol = num_resources)
-        N <- matrix(N0, byrow = TRUE, nrow = run_time, ncol = num_species)
-        K <- matrix(c(0.39, 0.34, 0.30, 0.24, 0.23, 0.41, 0.20, 0.45, 0.14, 0.15, 0.38, 0.28, 
-                      0.22, 0.39, 0.34, 0.30, 0.27, 0.16, 0.15, 0.05, 0.38, 0.29, 0.37, 0.31, 
-                      0.27, 0.22, 0.39, 0.34, 0.30, 0.07, 0.11, 0.05, 0.38, 0.41, 0.24, 0.25, 
-                      0.30, 0.24, 0.22, 0.39, 0.34, 0.28, 0.12, 0.13, 0.27, 0.33, 0.04, 0.41, 
-                      0.34, 0.30, 0.22, 0.20, 0.39, 0.40, 0.50, 0.26, 0.12, 0.29, 0.09, 0.16), 
-                    nrow = num_resources, byrow = TRUE)
-        C <- matrix(c(0.04, 0.04, 0.07, 0.04, 0.04, 0.22, 0.10, 0.08, 0.02, 0.17, 0.25, 0.03, 
-                      0.08, 0.08, 0.08, 0.10, 0.08, 0.14, 0.22, 0.04, 0.18, 0.06, 0.20, 0.04, 
-                      0.10, 0.10, 0.10, 0.10, 0.14, 0.22, 0.24, 0.12, 0.03, 0.24, 0.17, 0.01, 
-                      0.05, 0.03, 0.03, 0.03, 0.03, 0.09, 0.07, 0.06, 0.03, 0.03, 0.11, 0.05, 
-                      0.07, 0.09, 0.07, 0.07, 0.07, 0.05, 0.24, 0.05, 0.08, 0.10, 0.02, 0.04), 
-                    nrow = num_resources, byrow = TRUE)
-        
-        r <- rep.int(1, num_species) # maximum growth rate
-        m <- rep.int(0.25, num_species) # mortality
-        D <- 0.25
-        dt <- 0.01
-        sample_freq <- 100
-        
-        # loop
-        for(t in 1:(run_time-1))
-        {
-            x <- c(N = N[t,], R = R[t,])
-            for(k in 1:sample_freq)
-            {
-                x <- step(x, dt)
-            }
-            N[t+1,] <- head(x, num_species)
-            R[t+1,] <- tail(x, num_resources)
-            if(t == 999)
-            {
-                N[t+1,6:8] <- 0.1
-            }
-            if(t == 2999)
-            {
-                N[t+1,9:10] <- 0.1
-            }
-            if(t == 4999)
-            {
-                N[t+1,11:12] <- 0.1
-            }
-        }
-        
-        temp <- data.frame(cbind(N, R))
-        names(temp) <- c(paste("N", 1:NCOL(N), sep = ""), 
-                         paste("R", 1:NCOL(R), sep = ""))
-        return(temp)
-    }
-    
-    data <- run_model_4(run_time = 20000)
-    data <- data[, grep("^N[0-9]+", names(data))]
-    save(data, file = "model_4.Rdata")
 }
 
 ## Huisman-Weissing resource competition model

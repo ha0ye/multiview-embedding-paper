@@ -66,7 +66,7 @@ make_figure_2 <- function(file)
   }
   
   load(file)
-  
+  normed_data <- normalize(data)
   x <- normed_data[101:200,1]
   y <- normed_data[101:200,2]
   z <- normed_data[101:200,3]
